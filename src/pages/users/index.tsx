@@ -1,12 +1,14 @@
-import { Box, Flex, Heading, Button, Icon, Table, Thead, Tr, Th, Checkbox, Tbody, Td, Text, useBreakpointValue, Spinner } from '@chakra-ui/react'
+import { Box, Flex, Heading, Button, Icon, Table, Thead, Tr, Th, Checkbox, Tbody, Td, Text, useBreakpointValue, Spinner, Link } from '@chakra-ui/react'
 import { RiAddLine, RiPencilLine } from 'react-icons/ri';
-import Link from 'next/link'
+import NextLink from 'next/link'
 import { useEffect, useState } from 'react';
 
 import { Header } from '../../components/Header';
 import { Sidebar } from '../../components/Sidebar';
 import { Pagination} from '../../components/Pagination';
 import { useUsers } from '../../services/hooks/useUsers';
+import { queryClient } from '../../services/queryClient.ts';
+import { api } from '../../services/api';
 
 export default function Userlist() {
   const [page, setPage] = useState(1);
@@ -17,12 +19,16 @@ export default function Userlist() {
     lg: true
   })
 
-  useEffect(() => {
-    fetch('http://localhost:3000/api/users')
-    .then((response) => response.json())
-    .then(data => console.log(data));
-  }, [])
+  async function handlePrefetchUser(userId: number) {
+    await queryClient.prefetchQuery(['users', userId], async () => {
+      const response = await api.get(`users/${userId}`)
 
+      return response.data;
+    }, {
+      staleTime: 1000 * 60 * 10, // 10 minutes
+    })
+  }
+  
   return (
     <Box>
       <Header />
@@ -44,7 +50,7 @@ export default function Userlist() {
               {!isLoading && isFetching && <Spinner size='sm' color='gray.500' ml='4'/>}
             </Heading>
 
-            <Link href="/users/create" passHref>
+            <NextLink href="/users/create" passHref>
               <Button
                 as="a"
                 size="sm"
@@ -54,7 +60,7 @@ export default function Userlist() {
               >
                 Criar novo
               </Button>
-            </Link>
+            </NextLink>
           </Flex>
           {isLoading ? (
               <Flex justify="center">
@@ -85,7 +91,9 @@ export default function Userlist() {
                           </Td>
                           <Td px={["4", "4", "6"]}>
                             <Box>
-                              <Text fontWeight="bold">{user.name}</Text>
+                              <Link color="purple.400" onMouseEnter={() => handlePrefetchUser(user.id)}>
+                                <Text fontWeight="bold">{user.name}</Text>
+                              </Link>
                               <Text fontWeight="sm" color="gray.300">{user.email}</Text>
                             </Box>
                           </Td>
